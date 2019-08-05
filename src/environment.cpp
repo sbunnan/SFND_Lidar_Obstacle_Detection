@@ -6,7 +6,7 @@
 #include "render/render.h"
 
 #include "processPointClouds.h"
-#include "kdtree.h"
+
 // using templates for processPointClouds so also include .cpp to help linker
 #include "processPointClouds.cpp"
 
@@ -98,59 +98,8 @@ void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& vi
         viewer->addCoordinateSystem (1.0);
 }
 
-void proximity(const std::vector<std::vector<float>>& point, std::vector<int> &cluster, std::unordered_set<int> &point_index, int id, float distanceTol, KdTree* tree)
-{
-    point_index.insert(id);
 
-    //std::cout << "size:"  << point_index.size() << " id:" << id << std::endl;
-    cluster.push_back(id);
-    //std::cout << "id" << id << std::endl;
-    std::vector<int> nearby = tree->search(point[id], distanceTol);
-    std::cout << "nearby:"  << nearby.size() << "point id:" << id << std::endl;
-    for (int iter = 0; iter < nearby.size(); iter++)
-    {
-        //std::cout << "nearby point:"  << nearby[iter] << "iter id:" << iter << std::endl;
-        if (point_index.count(nearby[iter]) == 0)
-        {
-            //std::cout << "New id" << id << std::endl;
-            proximity(point, cluster, point_index, nearby[iter] , distanceTol, tree);
-        }
 
-    }
-
-    return;
-
-}
-
-std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
-{
-
-    // TODO: Fill out this function to return list of indices for each cluster
-
-    std::vector<std::vector<int>> clusters;
-    std::unordered_set<int> point_index;
-
-    for (int id = 0; id < points.size(); ++id)
-    {
-        if (point_index.count(id) > 0)
-        {
-            continue;
-        }
-        std::vector<int> cluster;
-        proximity(points, cluster, point_index, id, distanceTol, tree);
-        clusters.push_back(cluster);
-       // std::cout << "cluster size :" << cluster.size() << std::endl;
-
-    }
-
-    return clusters;
-
-}
-
-void sample()
-{
-
-}
 
 void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,  ProcessPointClouds<pcl::PointXYZI>* pointProcessorI, pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
 {
@@ -161,14 +110,14 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,  ProcessPointClou
     // ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
     // pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.1f , Eigen::Vector4f ( -15, -6.5, -20, 1), Eigen::Vector4f ( 25, 7.5, 20, 1));
+    pcl::PointCloud<pcl::PointXYZI>::Ptr filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.1f , Eigen::Vector4f ( -15, -6.5, -20, 1), Eigen::Vector4f ( 25, 8, 20, 1));
     //renderPointCloud(viewer, filterCloud, "filterCloud");
     ProcessPointClouds<pcl::PointXYZI> pointProcessor;
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessor.SegmentPlane(filterCloud, 100, 0.1);
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessor.SegmentPlane(filterCloud, 200, 0.15);
     renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(1, 0, 0));
     renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
 
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessor.Clustering(segmentCloud.first, 3, 40, 600 );
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessor.Clustering(segmentCloud.first, 0.5, 50, 2000 );
 
     int clusterId = 0;
     std::vector<Color> colors = {Color(1, 0, 0), Color(1, 1, 0), Color(0, 0, 1)};

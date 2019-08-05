@@ -1,128 +1,8 @@
 // PCL lib Functions for processing point clouds
 
 #include "processPointClouds.h"
-#include <unordered_set>
-#include "kdtree.h"
-
-template<typename PointT>
-struct KdNode
-{
-    typename pcl::PointCloud<PointT> point;
-    int id;
-    Node* left;
-    Node* right;
-
-    KdNode(typename pcl::PointCloud<PointT> arr, int setId)
-        :   point(arr), id(setId), left(NULL), right(NULL)
-    {}
-};
-
-/*template<typename PointT>
-class KdTree3D
-{
-public:
-    KdNode* root;
-
-    KdTree3D()
-        : root(NULL)
-    {}
-    void insertPoint(KdNode *&ptr, int id,  typename pcl::PointCloud<PointT> point, int& depth)
-    {
-
-        if (ptr == NULL)
-        {
-            ptr = new KdNode(point, id);
-        }
-        if (depth == 0)
-        {
-            depth = 1;
-            if (point.x < ptr->point)
-            {
-                insertPoint(ptr->left, id, point, depth);
-            }
-            else if (point.x > ptr->point.x)
-            {
-                insertPoint(ptr->right, id, point, depth);
-            }
-
-        }
-        else if (depth == 1 )
-        {
-            depth = 2;
-            if (point.y < ptr->point.y)
-            {
-                insertPoint(ptr->left, id, point, depth);
-
-            }
-            else if (point.x > ptr->point.y)
-            {
-                insertPoint(ptr->right, id, point, depth);
-
-            }
-        }
-        else if (depth == 3)
-        {
-            depth = 0;
-            if (point.z < ptr->point.z)
-            {
-                insertPoint(ptr->left, id, point, depth);
-
-            }
-            else if (point.z > ptr->point.z)
-            {
-                insertPoint(ptr->right, id, point, depth);
-
-            }
-
-        }
-    }
-
-    void insert(typename pcl::PointCloud<PointT> point, int id)
-    {
-        // TODO: Fill in this function to insert a new point into the tree
-        // the function should create a new node and place correctly with in the root
-        int depth = 0;
-        insertPoint(root, id, point, depth);
-    }
-
-    void searchPoint(typename pcl::PointCloud<PointT> target, KdNode* root, float distanceTol, int depth, std::vector<int> &id)
-    {
-        if (root != NULL)
-        {
-            if (((root->point.x <= (target.x + distanceTol)) && (root->point.x >= (target.x - distanceTol))) \
-                    && ((root->point.y <= (target.x + distanceTol)) && (root->point.x >= (target.x - distanceTol))) \
-                    && ((root->point.z <= (target.z + distanceTol)) && (root->point.z >= (target.z - distanceTol))))
-            {
-                float dis = sqrt(((target.x - root->point.x) * (target.x - root->point[0])) + ((target.y - root->point.y) * (target.y - root->point.y)) + ((target.z - root->point.z) * (target.z - root->point.z)));
-                if (dis <= distanceTol)
-                {
-                    id.push_back(root->id);
-                }
-            }
-
-            if ((target[depth % 3] - distanceTol) < root->point[depth % 3])
-            {
-                searchPoint(target, root->left, distanceTol, depth + 1, id);
-            }
-            if ((target[depth % 3] + distanceTol) > root->point[depth % 3])
-            {
-                searchPoint(target, root->right, distanceTol, depth + 1, id);
-            }
-        }
-    }
-
-    // return a list of point ids in the tree that are within distance of target
-    std::vector<int> search(typename pcl::PointCloud<PointT> target, float distanceTol)
-    {
-        std::vector<int> ids;
-        searchPoint(target, root, distanceTol, 0, ids);
-        return ids;
-    }
 
 
-
-
-};*/
 
 //constructor:
 template<typename PointT>
@@ -195,8 +75,8 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
 }
 
 
-/*template<typename PointT>
-static void Ransac3D( typename pcl::PointCloud<PointT>::Ptr cloud, pcl::PointIndices::Ptr inliers_point, int maxIterations, float distanceTol)
+template<typename PointT>
+void ProcessPointClouds<PointT>::Ransac3D( typename pcl::PointCloud<PointT>::Ptr cloud, pcl::PointIndices::Ptr inliers_point, int maxIterations, float distanceTol)
 {
     std::unordered_set<int> inliersResult;
     srand(time(NULL));
@@ -268,7 +148,7 @@ static void Ransac3D( typename pcl::PointCloud<PointT>::Ptr cloud, pcl::PointInd
 
 }
 
-*/
+
 
 
 template<typename PointT>
@@ -466,7 +346,82 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
     return clusters;
 }*/
+template<typename PointT>
+void ProcessPointClouds<PointT>::proximity(typename pcl::PointCloud<PointT>::Ptr cloud, std::vector<int> &cluster, std::unordered_set<int> &point_index, int id, float distanceTol, KdTree3D<PointT>* tree)
+{
+    point_index.insert(id);
 
+    //std::cout << "size:"  << point_index.size() << " id:" << id << std::endl;
+    cluster.push_back(id);
+    //std::cout << "id" << id << std::endl;
+    std::vector<int> nearby = tree->search(cloud->points[id], distanceTol);
+    //std::cout << "nearby:"  << nearby.size() << "point id:" << id << std::endl;
+    for (int iter = 0; iter < nearby.size(); iter++)
+    {
+        //std::cout << "nearby point:"  << nearby[iter] << "iter id:" << iter << std::endl;
+        if (point_index.count(nearby[iter]) == 0)
+        {
+            //std::cout << "New id" << id << std::endl;
+            proximity(cloud, cluster, point_index, nearby[iter] , distanceTol, tree);
+        }
+
+    }
+
+    return;
+
+}
+
+//std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::euclideanCluster(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
+template<typename PointT>
+std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>:: euclideanCluster(typename pcl::PointCloud<PointT>::Ptr cloud, float distanceTol, int minSize, int maxSize)
+{
+    // TODO: Fill out this function to return list of indices for each cluster
+
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+    std::unordered_set<int> point_index;
+
+    KdTree3D<PointT>* tree = new KdTree3D<PointT>();
+    for (int i = 0; i < cloud->points.size(); i++)
+    {
+
+        tree->insert(cloud->points[i], i);
+
+    }
+
+    for (int id = 0; id < cloud->points.size(); ++id)
+    {
+        if (point_index.count(id) > 0)
+        {
+            continue;
+        }
+        //typename pcl::PointCloud<PointT>::Ptr cloud_cluster (new typename pcl::PointCloud<PointT>());
+        std::vector<int> cluster;
+        proximity(cloud, cluster, point_index, id, distanceTol, tree);
+
+        if ((cluster.size() >= minSize) && (cluster.size() <= maxSize))
+        {
+            typename pcl::PointCloud<PointT>::Ptr cloud_cluster (new typename pcl::PointCloud<PointT>());
+
+            for (int cluster_index : cluster)
+            {
+                cloud_cluster->points.push_back(cloud->points[cluster_index]);
+            }
+            cloud_cluster->width = cloud_cluster->points.size();
+            cloud_cluster->height = 1;
+            cloud_cluster->is_dense = true;
+            clusters.push_back(cloud_cluster);
+        }
+        else
+        {
+            point_index.erase(id);
+           // std::cout << "  " << std::endl;
+        }
+        
+
+    }
+
+    return clusters;
+}
 
 template<typename PointT>
 std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::Clustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
@@ -477,48 +432,9 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
     // Time clustering process
     auto startTime = std::chrono::steady_clock::now();
 
-    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters = euclideanCluster( cloud, clusterTolerance, minSize, maxSize );
 
-    KdTree* tree = new KdTree;
 
-    std::vector<std::vector<float>> points;
-    for (int i = 0; i < cloud->points.size(); i++)
-    {
-        PointT temp_point = cloud->points[i];
-        std::vector<float> vec_point = {temp_point.x, temp_point.y, temp_point.z};
-        points.push_back(vec_point);
-        tree->insert(vec_point, i);
-
-    }
-    std::cout << " In cluster size" << points.size() << ": " << cloud->points.size()  <<std::endl;
-    std::vector<std::vector<int>> vect_cluster =  euclideanCluster(points, tree, clusterTolerance);
-
-    std::cout << "vector size" << vect_cluster.size() << ": " << cloud->points.size()  <<std::endl;
-    for (int it = 0; it < vect_cluster.size(); ++it)
-    {
-        typename pcl::PointCloud<PointT>::Ptr cloud_cluster (new typename pcl::PointCloud<PointT>());
-        std::cout << " In cluster size" << vect_cluster[it].size() << std::endl;
-        for (int pit = 0 ; vect_cluster[it].size(); ++pit)
-        {
-            std::vector<float> temp = points[vect_cluster[it][pit]];
-            PointT temp_points;
-            temp_points.x = temp[0];
-            temp_points.y = temp[1];
-            temp_points.x = temp[2];
-
-            cloud_cluster->points.push_back (temp_points); //*
-        }
-        cloud_cluster->width = cloud_cluster->points.size ();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
-
-        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-        if ((cloud_cluster->width < maxSize) && ( cloud_cluster->width > minSize))
-        {
-            clusters.push_back(cloud_cluster);
-        }
-        //clusters.push_back(cloud_cluster);
-    }
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);

@@ -1,3 +1,0 @@
-/home/sourabh/sensor_fusion_course/SFND_Lidar_Obstacle_Detection/src/quiz/cluster/build/CMakeFiles/edit_cache.dir
-/home/sourabh/sensor_fusion_course/SFND_Lidar_Obstacle_Detection/src/quiz/cluster/build/CMakeFiles/rebuild_cache.dir
-/home/sourabh/sensor_fusion_course/SFND_Lidar_Obstacle_Detection/src/quiz/cluster/build/CMakeFiles/quizCluster.dir

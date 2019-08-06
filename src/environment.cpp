@@ -70,7 +70,7 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
             ++clusterId;
         }*/
 
-    //delete lidar_sensor;
+    delete lidar_sensor;
     //delete pointProcessor;
 }
 
@@ -113,7 +113,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,  ProcessPointClou
     pcl::PointCloud<pcl::PointXYZI>::Ptr filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.1f , Eigen::Vector4f ( -15, -6.5, -20, 1), Eigen::Vector4f ( 25, 8, 20, 1));
     //renderPointCloud(viewer, filterCloud, "filterCloud");
     ProcessPointClouds<pcl::PointXYZI> pointProcessor;
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessor.SegmentPlane(filterCloud, 200, 0.15);
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmentCloud = pointProcessor.SegmentPlane(filterCloud, 100, 0.15);
     renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(1, 0, 0));
     renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
 
@@ -124,8 +124,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer,  ProcessPointClou
 
     for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters)
     {
-        //std::cout << "cluster size ";
-        pointProcessor.numPoints(cluster);
+        //pointProcessor.numPoints(cluster);
         renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId), colors[clusterId % 3]);
         Box box = pointProcessor.BoundingBox(cluster);
         renderBox(viewer, box, clusterId);
@@ -142,38 +141,39 @@ int main (int argc, char** argv)
     initCamera(setAngle, viewer);
 
 
-    ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
+    //ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
+    //pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
     // renderPointCloud(viewer, inputCloud, "inputCloud");
-    cityBlock(viewer, pointProcessorI, inputCloud);
-    while (!viewer->wasStopped ())
-    {
-        viewer->spinOnce ();
-    }
-
-
-
-    /*    ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
-        std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_2");
-        auto streamIterator = stream.begin();
-        pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloudI;
-
-
+    /*    cityBlock(viewer, pointProcessorI, inputCloud);
         while (!viewer->wasStopped ())
         {
-
-            // Clear viewer
-            viewer->removeAllPointClouds();
-            viewer->removeAllShapes();
-
-            // Load pcd and run obstacle detection process
-            inputCloudI = pointProcessorI->loadPcd((*streamIterator).string());
-            cityBlock(viewer, pointProcessorI, inputCloudI);
-
-            streamIterator++;
-            if (streamIterator == stream.end())
-                streamIterator = stream.begin();
-
             viewer->spinOnce ();
         }*/
+
+
+
+    ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
+    std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_1");
+    auto streamIterator = stream.begin();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloudI;
+
+
+    while (!viewer->wasStopped ())
+    {
+
+        // Clear viewer
+        viewer->removeAllPointClouds();
+        viewer->removeAllShapes();
+
+        // Load pcd and run obstacle detection process
+        inputCloudI = pointProcessorI->loadPcd((*streamIterator).string());
+        cityBlock(viewer, pointProcessorI, inputCloudI);
+
+        streamIterator++;
+        if (streamIterator == stream.end())
+            streamIterator = stream.begin();
+
+        viewer->spinOnce ();
+    }
 }
+
